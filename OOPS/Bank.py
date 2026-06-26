@@ -2,7 +2,7 @@ class InsufficientFunds(Exception):
     pass
 
 
-
+import json
 
 
 class Account:
@@ -51,6 +51,8 @@ class SavingsAccount(Account):
     
     def apply_interest(self):
         self._balance+=self._balance * self._interest_rate
+    def get_interest(self):
+        return self._interest_rate
     
 
 class CheckingAccount(Account):
@@ -65,7 +67,11 @@ class CheckingAccount(Account):
             raise InsufficientFunds("Overdraft limit crossed")
         else:
             self._balance-=amount
-
+    def return_Overdraft(self):
+        return self._overdraft_limit
+    
+    
+    
 class Bank:
     def __init__(self):
         self.Accounts=[]
@@ -94,18 +100,105 @@ class Bank:
     def list_accounts(self):
         return sorted(self.Accounts)
 
+print("Welcome to Meezan Bank")
 Meezan=Bank()
-s1=SavingsAccount(12345,0.076)
-s2=CheckingAccount(1267,2000)
-Meezan.add_account(s1)
-Meezan.add_account(s2)
 
-s1.deposit(20000)
-s2.deposit(10000)
-Meezan.transfer(12345,1267,1000)
-account_list=Meezan.list_accounts()
+try:
+    with open("Bank.json","r") as file:
+        data=json.load(file)
+        for item in data:
+            if item["type"] == "SavingsAccount":
+                acc=SavingsAccount(item["Accountno"],item["Interestrate"])
+                acc._balance=item["balance"]
+                Meezan.add_account(acc)
+            elif item["type"] == "CheckingAccount":
+                acc=CheckingAccount(item["Accountno"],item["Overdraftlimit"])
+                acc._balance=item["balance"]
+                Meezan.add_account(acc)
+except FileNotFoundError:
+    pass     
+            
+        
+         
 
-for m in account_list:
-    print (f"Account_no:{m.get_accountno()} Balance:{m.return_balance()}")
+while True:
+    option =int(input("1)Add account 2)Deposit 3)Withdraw 4)transfer money 5)List accounts 6)Exit"))
+    if option == 1:
+        opt=int(input("Enter which account you wanna open 1)savings account 2) checkings account:"))
+        if opt == 1:
+            account_no=int(input("Enter the account_no:"))
+            interest=float(input("Enter interest you want:"))
+            interest=interest/100
+            s1=SavingsAccount(account_no,interest)
+            Meezan.add_account(s1)
+        elif opt == 2:
+            account_no=int(input("Enter the account_no"))
+            overdraft=int(input("Enter the overdraft limit you want:"))
+            c1=CheckingAccount(account_no,overdraft)
+            Meezan.add_account(c1)
+        else:
+            print("Invalid option")
+    elif option == 2:
+        account_no=int(input("Enter your account_no in which you wanna deposit:"))
+        amount=int(input("Enter the amount to deposit:"))
+        
+        flag=False
+        try:
+                for acc in Meezan.Accounts:
+                    acci=acc.get_accountno()
+                    if acci == account_no:
+                        acc.deposit(amount)
+                        flag=True
+                        break
+                if flag== False:
+                    print("Account not found")
+        except Exception as e:
+                print (e)
+    elif option == 3:
+            account_no=int(input("Enter your account_no from which you wanna withdraw:"))
+            amount=int(input("Enter the amount to withdraw:"))
+            flag = False
+            try:
+                for acc in Meezan.Accounts:
+                    acci=acc.get_accountno()
+                    if acci == account_no:
+                        acc.withdraw(amount)
+                        flag=True
+                        break
+                if flag== False:
+                    print("Account not found")
+            except Exception as e:
+                print (e)
+    elif option == 4:
+        fro=int(input("Enter senders account no:"))
+        to=int(input("Enter receivers account no:"))
+        amount=int(input("Enter the amount you wanna send:"))
+        Meezan.transfer(fro,to,amount)
     
-    
+    elif option == 5:
+        li=Meezan.list_accounts()
+        for acc in li:
+            print("Account_no:",acc.get_accountno(),"Balance:",acc.return_balance())
+   
+    elif option == 6:
+        data=[]
+        for item in Meezan.Accounts:
+            if isinstance(item,SavingsAccount):
+                data.append({"type":"SavingsAccount","Accountno":item.get_accountno(),
+                             "balance":item.return_balance(),"Interestrate":item.get_interest()})
+        
+            elif isinstance(item,CheckingAccount):
+                data.append({"type":"CheckingAccount","Accountno":item.get_accountno(),
+                             "Balance":item.return_balance(),
+                             "Overdraftlimit":item.return_Overdraft()})
+            
+        with open("Bank.json","w") as file:
+            json.dump(data,file)
+        
+        
+        
+        print("Exiting bank")
+        break
+    else:
+        print("Invalid option")
+        
